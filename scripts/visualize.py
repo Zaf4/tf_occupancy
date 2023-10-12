@@ -20,7 +20,8 @@ def read_data(file: str|os.PathLike,
 
 @timer
 def down_scale(chr: pl.DataFrame,max_size:int=20_000)->pl.DataFrame:
-    """Reduces the size of chr (chromosome) dataframe for testing"""
+    """Reduces the size of chr (chromosome) dataframe for testing
+    Returns full scale dataframe if max_size == 0"""
     if max_size == 0:
         return chr
     else:
@@ -37,14 +38,19 @@ def draw_lines(chr:pl.DataFrame,template:str)->str:
     previous_end = 0
     line_count = 0
 
+    overlap_range = (0,1) #min,max
+
     for (start,),(width,) in zip(chr.select("Start").iter_rows(),chr.select("Range").iter_rows()):
         
-        if start < previous_end and start+width>previous_start:
-            line = new_line(start,width,margin_top=2)
-            line_count += 1
+        #if no overlap, if -> (completely on left) and (completely on right)
+        if (start < previous_end) and (start+width>previous_start):
+            line = new_line(start,width,margin_top=2) # 2px spacing between lines
+            line_count += 1 #count the number of lines on top of each other
+            if start<
         else:
-            line = new_line(start,width,margin_top=line_count*-6-4)
-            line_count=0
+            #6 comes from 4 (line height) + 2 (margin spacing) and 4 to remove single line spacing
+            line = new_line(start,width,margin_top=line_count*-6-4) # subtracted to reset to top
+            line_count=0  # reset if the new line is non-overlapping
         
         lines+=line
         previous_end=start+width
@@ -58,18 +64,18 @@ def draw_chr(chr:pl.DataFrame,template:str)->None:
 
     return template.replace("{chr}",chr_line)
 
-@timer
 def main()->None:
-    template = read_html() #template html file
+    html = read_html() #template html file
 
     chr1 = read_data("chr1.csv")
-    chr1 = down_scale(chr1,20_000)
+    chr1 = down_scale(chr1,100_000)
     
-    new_html = draw_lines(chr1,template)
-    new_html = draw_chr(chr1,new_html)
+    html = draw_chr(chr1,html)
+    html = draw_lines(chr1,html)
+    
 
     with open ("CHR1.html","w",encoding="utf-8") as final:
-        final.write(new_html)
+        final.write(html)
 
     return
 

@@ -3,7 +3,7 @@ import os
 from utility import timer
 
 #DEFINE globals
-LINE = '<div class="line" style="width: {}px; margin-left: {}px;"></div>'
+LINE = '<div class="line" style="width: {}px; margin-left: {}px; margin-top: {}px; title="This is a line tooltip."></div>'
 CHROMOSOME = '<div class="chr" style="width: {}px;"></div>'
 
 @timer
@@ -21,18 +21,33 @@ def read_data(file: str|os.PathLike,
 @timer
 def down_scale(chr: pl.DataFrame,max_size:int=20_000)->pl.DataFrame:
     """Reduces the size of chr (chromosome) dataframe for testing"""
-    return chr.filter(pl.col("End")<max_size)
+    if max_size == 0:
+        return chr
+    else:
+        return chr.filter(pl.col("End")<max_size)
 
-
-def new_line(start:int,width:int)->str:
-    line = "\t"+LINE.format(width,start)+"\n"
+def new_line(start:int,width:int,margin_top:int=0)->str:
+    line = "\t"+LINE.format(width,start,margin_top)+"\n"
     return line
 
 @timer
 def draw_lines(chr:pl.DataFrame,template:str)->str:
     lines = ""
-    for start,width in zip(chr.select("Start").iter_rows(),chr.select("Range").iter_rows()):
-        lines+=new_line(start[0],width[0])
+    previous_start = 0
+    previous_end = 0
+    line_count = 0
+
+    for (start,),(width,) in zip(chr.select("Start").iter_rows(),chr.select("Range").iter_rows()):
+        
+        if start < previous_end and start+width>previous_start:
+            line = new_line(start,width,margin_top=2)
+            line_count += 1
+        else:
+            line = new_line(start,width,margin_top=line_count*-6-4)
+            line_count=0
+        
+        lines+=line
+        previous_end=start+width
     
     return template.replace("{line}",lines)
 
@@ -48,7 +63,7 @@ def main()->None:
     template = read_html() #template html file
 
     chr1 = read_data("chr1.csv")
-    chr1 = down_scale(chr1,200_000)
+    chr1 = down_scale(chr1,20_000)
     
     new_html = draw_lines(chr1,template)
     new_html = draw_chr(chr1,new_html)

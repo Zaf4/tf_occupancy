@@ -95,7 +95,7 @@ def main()->None:
     html = read_html() #template html file
 
     chr1 = read_data("chr1.csv")
-    chr1 = down_scale(chr1,100_000)
+    chr1 = down_scale(chr1,0)
     
     html = draw_chr(chr1,html)
     html = draw_lines(chr1,html)
